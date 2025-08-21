@@ -1,105 +1,127 @@
--- Ban/Unban GUI with player list + hide/show button
-
+-- Last Breath Sans GUI (Phase 2)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
--- banned list (UserId)
-local bannedPlayers = {}
+-- создаём GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 200, 0, 250)
+Frame.Position = UDim2.new(0.05, 0, 0.3, 0)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.Active = true
+Frame.Draggable = true
 
--- check and kick
-local function checkBan(player)
-    if bannedPlayers[player.UserId] then
-        player:Kick("You are banned by admin.")
-    end
+-- функция создания кнопок
+local function makeButton(name, pos, func)
+    local btn = Instance.new("TextButton", Frame)
+    btn.Size = UDim2.new(1, -10, 0, 40)
+    btn.Position = UDim2.new(0, 5, 0, pos)
+    btn.Text = name
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.MouseButton1Click:Connect(func)
+    return btn
 end
 
-Players.PlayerAdded:Connect(checkBan)
-
--- GUI
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0, 250, 0, 300)
-MainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-MainFrame.Active = true
-MainFrame.Draggable = true
-
--- Hide/Show button
-local ToggleButton = Instance.new("TextButton", ScreenGui)
-ToggleButton.Size = UDim2.new(0, 60, 0, 30)
-ToggleButton.Position = UDim2.new(0, 10, 0, 10)
-ToggleButton.Text = "Hide"
-ToggleButton.BackgroundColor3 = Color3.fromRGB(70,70,200)
-
-local visible = true
-ToggleButton.MouseButton1Click:Connect(function()
-    visible = not visible
-    MainFrame.Visible = visible
-    ToggleButton.Text = visible and "Hide" or "Show"
-end)
-
--- Title
-local Title = Instance.new("TextLabel", MainFrame)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Text = "Ban/Unban Menu"
-Title.BackgroundColor3 = Color3.fromRGB(50,50,50)
-Title.TextColor3 = Color3.fromRGB(255,255,255)
-
--- Scrollable player list
-local PlayerList = Instance.new("ScrollingFrame", MainFrame)
-PlayerList.Size = UDim2.new(1, -10, 1, -40)
-PlayerList.Position = UDim2.new(0, 5, 0, 35)
-PlayerList.CanvasSize = UDim2.new(0,0,0,0)
-PlayerList.BackgroundColor3 = Color3.fromRGB(40,40,40)
-PlayerList.ScrollBarThickness = 6
-
--- Function to refresh list
-local function refreshList()
-    PlayerList:ClearAllChildren()
-    local y = 0
-    for _,player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            local Frame = Instance.new("Frame", PlayerList)
-            Frame.Size = UDim2.new(1, -10, 0, 30)
-            Frame.Position = UDim2.new(0, 5, 0, y)
-            Frame.BackgroundColor3 = Color3.fromRGB(60,60,60)
-
-            local NameLabel = Instance.new("TextLabel", Frame)
-            NameLabel.Size = UDim2.new(0.5, 0, 1, 0)
-            NameLabel.Text = player.Name
-            NameLabel.BackgroundTransparency = 1
-            NameLabel.TextColor3 = Color3.fromRGB(255,255,255)
-
-            local BanBtn = Instance.new("TextButton", Frame)
-            BanBtn.Size = UDim2.new(0.25, -2, 1, 0)
-            BanBtn.Position = UDim2.new(0.5, 2, 0, 0)
-            BanBtn.Text = "BAN"
-            BanBtn.BackgroundColor3 = Color3.fromRGB(200,50,50)
-
-            local UnbanBtn = Instance.new("TextButton", Frame)
-            UnbanBtn.Size = UDim2.new(0.25, -2, 1, 0)
-            UnbanBtn.Position = UDim2.new(0.75, 2, 0, 0)
-            UnbanBtn.Text = "UNBAN"
-            UnbanBtn.BackgroundColor3 = Color3.fromRGB(50,200,50)
-
-            BanBtn.MouseButton1Click:Connect(function()
-                bannedPlayers[player.UserId] = true
-                player:Kick("You are banned by admin.")
-            end)
-
-            UnbanBtn.MouseButton1Click:Connect(function()
-                bannedPlayers[player.UserId] = nil
-            end)
-
-            y = y + 35
+-- функция урона
+local function dealDamage(part, dmg)
+    part.Touched:Connect(function(hit)
+        local hum = hit.Parent:FindFirstChild("Humanoid")
+        if hum and hit.Parent ~= LocalPlayer.Character then
+            hum:TakeDamage(dmg)
         end
-    end
-    PlayerList.CanvasSize = UDim2.new(0,0,0,y)
+    end)
 end
 
--- Refresh on join/leave
-Players.PlayerAdded:Connect(refreshList)
-Players.PlayerRemoving:Connect(refreshList)
+-- 1. Кость (Bone)
+local function spawnBone()
+    local char = LocalPlayer.Character
+    if not char then return end
 
--- First refresh
-refreshList()
+    local bone = Instance.new("Part")
+    bone.Size = Vector3.new(1, 4, 1)
+    bone.Position = char.Head.Position + Vector3.new(0, 3, -5)
+    bone.BrickColor = BrickColor.new("Institutional white")
+    bone.Anchored = false
+    bone.CanCollide = true
+    bone.Parent = workspace
+
+    local mesh = Instance.new("SpecialMesh", bone)
+    mesh.MeshType = Enum.MeshType.Brick
+    mesh.Scale = Vector3.new(0.5, 2, 0.5)
+
+    dealDamage(bone, 20)
+
+    game:GetService("Debris"):AddItem(bone, 5)
+end
+
+-- 2. Бластер (Gaster Blaster)
+local function spawnBlaster()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local blaster = Instance.new("Part")
+    blaster.Size = Vector3.new(2, 2, 6)
+    blaster.Position = char.Head.Position + Vector3.new(0, 3, -10)
+    blaster.BrickColor = BrickColor.new("Really black")
+    blaster.Anchored = true
+    blaster.Parent = workspace
+
+    local beam = Instance.new("Part")
+    beam.Size = Vector3.new(1, 1, 20)
+    beam.Position = blaster.Position + Vector3.new(0, 0, -10)
+    beam.BrickColor = BrickColor.new("Really red")
+    beam.Anchored = true
+    beam.Parent = workspace
+
+    dealDamage(beam, 50)
+
+    game:GetService("Debris"):AddItem(blaster, 2)
+    game:GetService("Debris"):AddItem(beam, 2)
+end
+
+-- 3. Щит (Shield)
+local shieldActive = false
+local function toggleShield()
+    local char = LocalPlayer.Character
+    if not char then return end
+    if shieldActive then
+        if char:FindFirstChild("BoneShield") then
+            char.BoneShield:Destroy()
+        end
+        shieldActive = false
+    else
+        local shield = Instance.new("ForceField", char)
+        shield.Name = "BoneShield"
+        shieldActive = true
+    end
+end
+
+-- 4. Меч (Bone Sword)
+local function spawnSword()
+    local char = LocalPlayer.Character
+    if not char then return end
+
+    local sword = Instance.new("Tool")
+    sword.Name = "Bone Sword"
+    sword.RequiresHandle = true
+    sword.Parent = LocalPlayer.Backpack
+
+    local handle = Instance.new("Part")
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(0.5,5,0.5)
+    handle.BrickColor = BrickColor.new("Institutional white")
+    handle.Parent = sword
+
+    local mesh = Instance.new("SpecialMesh", handle)
+    mesh.MeshType = Enum.MeshType.Brick
+    mesh.Scale = Vector3.new(0.3,1,0.3)
+
+    dealDamage(handle, 30)
+end
+
+-- добавляем кнопки
+makeButton("Summon Bone (20 dmg)", 10, spawnBone)
+makeButton("Summon Blaster (50 dmg)", 60, spawnBlaster)
+makeButton("Toggle Shield", 110, toggleShield)
+makeButton("Bone Sword (30 dmg)", 160, spawnSword)
