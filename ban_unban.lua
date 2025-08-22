@@ -1,15 +1,13 @@
--- GUI + Ракеты + Радар (полный пак)
+-- Исправленный скрипт: нормальный радар + ракеты не убивают игрока
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
 
--- Создаём GUI
+-- === GUI ===
 local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
 ScreenGui.Name = "RocketSystem"
 
--- Главная рамка
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Size = UDim2.new(0, 200, 0, 150)
 MainFrame.Position = UDim2.new(0.05, 0, 0.05, 0)
@@ -17,7 +15,6 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 MainFrame.Active = true
 MainFrame.Draggable = true
 
--- Кнопки
 local BtnPlayers = Instance.new("TextButton", MainFrame)
 BtnPlayers.Size = UDim2.new(1, -10, 0, 40)
 BtnPlayers.Position = UDim2.new(0, 5, 0, 10)
@@ -28,7 +25,6 @@ BtnNPC.Size = UDim2.new(1, -10, 0, 40)
 BtnNPC.Position = UDim2.new(0, 5, 0, 60)
 BtnNPC.Text = "👾 Навести на NPC"
 
--- Кнопка закрытия GUI
 local CloseBtn = Instance.new("TextButton", MainFrame)
 CloseBtn.Size = UDim2.new(1, -10, 0, 30)
 CloseBtn.Position = UDim2.new(0, 5, 0, 110)
@@ -39,7 +35,7 @@ CloseBtn.MouseButton1Click:Connect(function()
     MainFrame.Visible = not hidden
 end)
 
--- Радар
+-- === Радар ===
 local Radar = Instance.new("Frame", ScreenGui)
 Radar.Size = UDim2.new(0, 200, 0, 200)
 Radar.Position = UDim2.new(0.8, 0, 0.05, 0)
@@ -53,7 +49,11 @@ RadarLabel.Text = "📡 Радар"
 RadarLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 RadarLabel.TextColor3 = Color3.fromRGB(255,255,255)
 
--- Функция ракеты
+-- Размер радара и масштаб
+local radarSize = 200
+local radarRange = 100 -- радиус обнаружения в студийных единицах
+
+-- === Ракеты ===
 local function createRocket(target)
     local rocket = Instance.new("Part", workspace)
     rocket.Shape = Enum.PartType.Cylinder
@@ -65,7 +65,6 @@ local function createRocket(target)
 
     local bv = Instance.new("BodyVelocity", rocket)
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bv.Velocity = Vector3.new(0,0,0)
 
     -- Наводка
     local conn
@@ -80,6 +79,9 @@ local function createRocket(target)
 
     -- Урон при касании
     rocket.Touched:Connect(function(hit)
+        -- Не наносим урон себе
+        if hit:IsDescendantOf(LocalPlayer.Character) then return end  
+
         local hum = hit.Parent:FindFirstChildOfClass("Humanoid")
         if hum then
             hum:TakeDamage(100)
@@ -109,7 +111,7 @@ BtnNPC.MouseButton1Click:Connect(function()
     end
 end)
 
--- Обновление радара
+-- === Обновление радара ===
 RunService.Heartbeat:Connect(function()
     for _,c in pairs(Radar:GetChildren()) do
         if c:IsA("Frame") and c.Name == "Dot" then
@@ -117,13 +119,23 @@ RunService.Heartbeat:Connect(function()
         end
     end
 
+    local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
     for _,plr in pairs(Players:GetPlayers()) do
         if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local dot = Instance.new("Frame", Radar)
-            dot.Size = UDim2.new(0,5,0,5)
-            dot.Name = "Dot"
-            dot.BackgroundColor3 = (plr == LocalPlayer) and Color3.new(0,1,0) or Color3.new(1,0,0)
-            dot.Position = UDim2.new(math.random(),0,math.random(),0)
+            local pos = plr.Character.HumanoidRootPart.Position
+            local relative = (pos - root.Position) / radarRange -- нормализуем по дальности
+            local x = 0.5 + relative.X * 0.5
+            local y = 0.5 + relative.Z * 0.5 -- Z вместо Y (вид сверху)
+
+            if x >= 0 and x <= 1 and y >= 0 and y <= 1 then
+                local dot = Instance.new("Frame", Radar)
+                dot.Size = UDim2.new(0,5,0,5)
+                dot.Name = "Dot"
+                dot.BackgroundColor3 = (plr == LocalPlayer) and Color3.new(0,1,0) or Color3.new(1,0,0)
+                dot.Position = UDim2.new(x, -2, y, -2)
+            end
         end
     end
 end)
