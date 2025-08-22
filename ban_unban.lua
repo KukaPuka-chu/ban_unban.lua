@@ -1,4 +1,3 @@
--- Скрипт для локального игрока 
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
@@ -18,8 +17,19 @@ handle.Color = Color3.fromRGB(30,30,30)
 handle.Parent = tool
 tool.Handle = handle
 
--- Создаём скрипт для стрельбы
-tool.Activated:Connect(function()
+-- Создаём GUI для выстрела
+local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+local fireButton = Instance.new("TextButton", screenGui)
+fireButton.Size = UDim2.new(0,100,0,50)
+fireButton.Position = UDim2.new(0.9, -50, 0.9, -25)
+fireButton.Text = "FIRE"
+
+local fireRate = 0.05 -- очень быстрый выстрел
+local canFire = true
+
+local function shoot()
+    if not canFire then return end
+    canFire = false
     local bullet = Instance.new("Part")
     bullet.Size = Vector3.new(0.3,0.3,1)
     bullet.BrickColor = BrickColor.new("Bright red")
@@ -29,19 +39,23 @@ tool.Activated:Connect(function()
     bullet.Parent = workspace
 
     local bv = Instance.new("BodyVelocity")
-    bv.Velocity = handle.CFrame.lookVector * 200 -- скорость пули
+    bv.Velocity = handle.CFrame.lookVector * 500 -- скорость пули
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
     bv.Parent = bullet
 
-    -- Урон при касании
     bullet.Touched:Connect(function(hit)
         local h = hit.Parent:FindFirstChild("Humanoid")
         if h and hit.Parent ~= character then
-            h:TakeDamage(50) -- 50 урона
+            h:TakeDamage(50)
             bullet:Destroy()
         end
     end)
 
-    -- Уничтожение пули через 3 секунды
     game:GetService("Debris"):AddItem(bullet, 3)
-end)
+    
+    wait(fireRate)
+    canFire = true
+end
+
+fireButton.MouseButton1Click:Connect(shoot)
+tool.Activated:Connect(shoot) -- также можно стрелять через Tool
