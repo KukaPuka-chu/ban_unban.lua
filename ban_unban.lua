@@ -6,18 +6,13 @@ local UIS = game:GetService("UserInputService")
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
--- ===========================
 -- Музыка, которая играет у всех
--- ===========================
 local Music = Instance.new("Sound", workspace)
-Music.SoundId = "rbxassetid://5700464468"  -- Last Breath Phase 2 (Remastered)
+Music.SoundId = "rbxassetid://5621597815" -- Last Breath Phase 2 (Remastered)
 Music.Volume = 5
 Music.Looped = true
-Music:Play()
 
--- ===========================
 -- GUI
--- ===========================
 local gui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
 gui.ResetOnSpawn = false
 local frame = Instance.new("Frame", gui)
@@ -44,9 +39,8 @@ local function addButton(text, callback, order)
     btn.MouseButton1Click:Connect(callback)
 end
 
--- ===========================
 -- Способности
--- ===========================
+
 local function toggleMusic()
     if Music.IsPlaying then
         Music:Stop()
@@ -75,10 +69,12 @@ local function equipBoneSword()
     tool.Name = "Bone Sword"
     tool.RequiresHandle = true
     tool.Parent = LocalPlayer.Backpack
+
     local handle = Instance.new("Part", tool)
     handle.Name = "Handle"
     handle.Size = Vector3.new(1, 4, 1)
     handle.BrickColor = BrickColor.White()
+
     tool.Activated:Connect(function()
         local target = LocalPlayer:GetMouse().Target
         if target and target.Parent and target.Parent:FindFirstChildOfClass("Humanoid") and target.Parent ~= LocalPlayer.Character then
@@ -96,10 +92,12 @@ local function summonGasterBlaster()
     blaster.Anchored = true
     blaster.CFrame = CFrame.new(headPos + Vector3.new(0, 5, -8))
     blaster.BrickColor = BrickColor.new("Really black")
+
     local sound = Instance.new("Sound", blaster)
-    sound.SoundId = "rbxassetid://345052019"  -- Gaster Blaster Sound
+    sound.SoundId = "rbxassetid://345052019" -- Gaster Blaster Sound
     sound.Volume = 3
     sound:Play()
+
     local timer = 0
     local conn
     conn = RunService.Heartbeat:Connect(function(dt)
@@ -117,9 +115,7 @@ local function summonGasterBlaster()
             blaster.CFrame = CFrame.new(blaster.Position, nearest.Position)
             if dist < 25 then
                 local hum = nearest.Parent:FindFirstChild("Humanoid")
-                if hum then
-                    hum:TakeDamage(15)
-                end
+                if hum then hum:TakeDamage(15) end
             end
         end
         if timer > 3 then
@@ -135,18 +131,13 @@ local function spawnShield()
     Debris:AddItem(ff, 5)
 end
 
--- ===========================
 -- Кнопки
--- ===========================
 addButton("Toggle Music", toggleMusic, 1)
 addButton("Bone Wall", spawnBoneWall, 2)
 addButton("Bone Sword", equipBoneSword, 3)
 addButton("Gaster Blaster", summonGasterBlaster, 4)
 addButton("Shield", spawnShield, 5)
 
--- ===========================
--- Управление GUI
--- ===========================
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.P then
