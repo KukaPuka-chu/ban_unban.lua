@@ -1,91 +1,147 @@
-local player = game.Players.LocalPlayer
-local mouse = player:GetMouse()
-local uis = game:GetService("UserInputService")
-local runService = game:GetService("RunService")
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local soundService = game:GetService("SoundService")
+loadstring([==[
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
--- ===== GUI =====
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = player:WaitForChild("PlayerGui")
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 100)
-frame.Position = UDim2.new(0.5, -100, 0.9, -50)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Parent = screenGui
+local localPlayer = Players.LocalPlayer
+local mouse = localPlayer:GetMouse()
 
-local buttonBlast = Instance.new("TextButton")
-buttonBlast.Size = UDim2.new(0, 90, 0, 30)
-buttonBlast.Position = UDim2.new(0, 10, 0, 10)
-buttonBlast.Text = "Gaster Blast"
-buttonBlast.Parent = frame
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Parent = localPlayer:WaitForChild("PlayerGui")
 
-local buttonWall = Instance.new("TextButton")
-buttonWall.Size = UDim2.new(0, 90, 0, 30)
-buttonWall.Position = UDim2.new(0, 10, 0, 50)
-buttonWall.Text = "Bone Wall"
-buttonWall.Parent = frame
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 250, 0, 300)
+mainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+mainFrame.Parent = ScreenGui
 
--- ===== Музыка =====
-local sound = Instance.new("Sound")
-sound.SoundId = "rbxassetid://5700464468" -- <-- сюда вставь ID Last Breath Phase 2
-sound.Looped = true
-sound.Volume = 1
-sound.Parent = soundService
-sound:Play()
+local uiList = Instance.new("UIListLayout")
+uiList.Padding = UDim.new(0,5)
+uiList.Parent = mainFrame
 
--- ===== Функции =====
-local function createGasterBlast()
-    local blast = Instance.new("Part")
-    blast.Size = Vector3.new(1,1,1)
-    blast.Position = player.Character.HumanoidRootPart.Position + Vector3.new(0,3,0)
-    blast.Anchored = true
-    blast.CanCollide = false
-    blast.Parent = workspace
+-- Close Button
+local closeButton = Instance.new("TextButton")
+closeButton.Text = "Закрыть"
+closeButton.Size = UDim2.new(1,0,0,30)
+closeButton.Parent = mainFrame
+closeButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
 
-    local dmg = 30
-    local connection
-    connection = runService.Heartbeat:Connect(function()
-        for _, other in pairs(game.Players:GetPlayers()) do
-            if other ~= player and other.Character and other.Character:FindFirstChild("Humanoid") then
-                local hrp = other.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and (blast.Position - hrp.Position).Magnitude < 5 then
-                    other.Character.Humanoid:TakeDamage(dmg * runService.Heartbeat:Wait())
+-- Utility function for damage
+function applyDamage(part, damage)
+    RunService.RenderStepped:Connect(function()
+        if part.Parent then
+            for _,player in pairs(Players:GetPlayers()) do
+                if player ~= localPlayer and player.Character and player.Character:FindFirstChild("Humanoid") then
+                    local hum = player.Character.Humanoid
+                    if (hum.RootPart.Position - part.Position).magnitude < 5 then
+                        hum:TakeDamage(damage * RunService.RenderStepped:Wait())
+                    end
                 end
             end
         end
     end)
-
-    game.Debris:AddItem(blast, 5)
-    delay(5, function() connection:Disconnect() end)
 end
 
-local function createBoneWall()
+-- Gaster Blaster Button
+local blasterButton = Instance.new("TextButton")
+blasterButton.Text = "Гастер-Бластер"
+blasterButton.Size = UDim2.new(1,0,0,30)
+blasterButton.Parent = mainFrame
+
+blasterButton.MouseButton1Click:Connect(function()
+    local blaster = Instance.new("Part")
+    blaster.Size = Vector3.new(3,3,3)
+    blaster.Position = localPlayer.Character.Head.Position + localPlayer.Character.Head.CFrame.LookVector * 5
+    blaster.Anchored = true
+    blaster.CanCollide = false
+    blaster.Parent = workspace
+
+    local decal = Instance.new("Decal", blaster)
+    decal.Texture = "https://i.supaimg.com/43eab1e1-08f6-4a79-acf9-5b458354040a.png"
+    decal.Face = Enum.NormalId.Front
+
+    local blasterSound = Instance.new("Sound", blaster)
+    blasterSound.SoundId = "rbxassetid://911045681"
+    blasterSound:Play()
+
+    applyDamage(blaster, 30)
+
+    RunService.RenderStepped:Connect(function()
+        if blaster.Parent then
+            local direction = (mouse.Hit.Position - blaster.Position).unit
+            blaster.Position = blaster.Position + direction * 0.5
+        end
+    end)
+end)
+
+-- Bone Wall Button
+local wallButton = Instance.new("TextButton")
+wallButton.Text = "Стена из костей"
+wallButton.Size = UDim2.new(1,0,0,30)
+wallButton.Parent = mainFrame
+
+wallButton.MouseButton1Click:Connect(function()
     local wall = Instance.new("Part")
-    wall.Size = Vector3.new(2,5,20)
-    wall.Position = player.Character.HumanoidRootPart.Position + player.Character.HumanoidRootPart.CFrame.LookVector * 5
+    wall.Size = Vector3.new(1,5,10)
+    wall.Position = localPlayer.Character.Head.Position + localPlayer.Character.Head.CFrame.LookVector * 10
     wall.Anchored = true
-    wall.CanCollide = true
+    wall.CanCollide = false
     wall.BrickColor = BrickColor.new("White")
     wall.Parent = workspace
 
-    local dmg = 30
-    local connection
-    connection = runService.Heartbeat:Connect(function()
-        for _, other in pairs(game.Players:GetPlayers()) do
-            if other ~= player and other.Character and other.Character:FindFirstChild("Humanoid") then
-                local hrp = other.Character:FindFirstChild("HumanoidRootPart")
-                if hrp and (wall.Position - hrp.Position).Magnitude < 5 then
-                    other.Character.Humanoid:TakeDamage(dmg * runService.Heartbeat:Wait())
-                end
-            end
+    applyDamage(wall, 30)
+
+    RunService.RenderStepped:Connect(function()
+        if wall.Parent then
+            local direction = localPlayer.Character.Head.CFrame.LookVector
+            wall.Position = wall.Position + direction * 0.5
         end
     end)
+end)
 
-    game.Debris:AddItem(wall, 7)
-    delay(7, function() connection:Disconnect() end)
-end
+-- Sword Button
+local swordButton = Instance.new("TextButton")
+swordButton.Text = "Меч"
+swordButton.Size = UDim2.new(1,0,0,30)
+swordButton.Parent = mainFrame
 
--- ===== Кнопки =====
-buttonBlast.MouseButton1Click:Connect(createGasterBlast)
-buttonWall.MouseButton1Click:Connect(createBoneWall)
+swordButton.MouseButton1Click:Connect(function()
+    local sword = Instance.new("Part")
+    sword.Size = Vector3.new(1,5,1)
+    sword.Position = localPlayer.Character.Head.Position + localPlayer.Character.Head.CFrame.LookVector * 5
+    sword.Anchored = false
+    sword.CanCollide = false
+    sword.BrickColor = BrickColor.new("Bright red")
+    sword.Parent = workspace
+
+    applyDamage(sword, 30)
+
+    sword.CFrame = localPlayer.Character.HumanoidRootPart.CFrame
+end)
+
+-- Music Button
+local musicButton = Instance.new("TextButton")
+musicButton.Text = "Музыка Last Breath Phase 2"
+musicButton.Size = UDim2.new(1,0,0,30)
+musicButton.Parent = mainFrame
+
+local music
+musicButton.MouseButton1Click:Connect(function()
+    if not music then
+        music = Instance.new("Sound", workspace)
+        music.SoundId = "rbxassetid://233264309" -- замените на свой ID
+        music.Looped = true
+        music:Play()
+    else
+        if music.IsPlaying then
+            music:Stop()
+        else
+            music:Play()
+        end
+    end
+end)
+]==])()
