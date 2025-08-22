@@ -1,84 +1,129 @@
+-- GUI + Ракеты + Радар (полный пак)
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Debris = game:GetService("Debris")
+local LocalPlayer = Players.LocalPlayer
+local Mouse = LocalPlayer:GetMouse()
 
-local player = Players.LocalPlayer
-local mouse = player:GetMouse()
-local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-gui.Name = "RocketGUI"
+-- Создаём GUI
+local ScreenGui = Instance.new("ScreenGui", LocalPlayer.PlayerGui)
+ScreenGui.Name = "RocketSystem"
 
--- Таблица GUI
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.new(0,200,0,100)
-frame.Position = UDim2.new(0.5,-100,0.8,0)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Active = true
-frame.Draggable = true
+-- Главная рамка
+local MainFrame = Instance.new("Frame", ScreenGui)
+MainFrame.Size = UDim2.new(0, 200, 0, 150)
+MainFrame.Position = UDim2.new(0.05, 0, 0.05, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+MainFrame.Active = true
+MainFrame.Draggable = true
 
--- Кнопка Ракета
-local rocketButton = Instance.new("TextButton", frame)
-rocketButton.Size = UDim2.new(0,180,0,40)
-rocketButton.Position = UDim2.new(0,10,0,10)
-rocketButton.Text = "Ракета"
+-- Кнопки
+local BtnPlayers = Instance.new("TextButton", MainFrame)
+BtnPlayers.Size = UDim2.new(1, -10, 0, 40)
+BtnPlayers.Position = UDim2.new(0, 5, 0, 10)
+BtnPlayers.Text = "🎯 Навести на игроков"
 
--- Кнопка закрытия
-local closeButton = Instance.new("TextButton", frame)
-closeButton.Size = UDim2.new(0,40,0,40)
-closeButton.Position = UDim2.new(0.75,0,0,10)
-closeButton.Text = "X"
+local BtnNPC = Instance.new("TextButton", MainFrame)
+BtnNPC.Size = UDim2.new(1, -10, 0, 40)
+BtnNPC.Position = UDim2.new(0, 5, 0, 60)
+BtnNPC.Text = "👾 Навести на NPC"
 
-closeButton.MouseButton1Click:Connect(function()
-    frame.Visible = false
+-- Кнопка закрытия GUI
+local CloseBtn = Instance.new("TextButton", MainFrame)
+CloseBtn.Size = UDim2.new(1, -10, 0, 30)
+CloseBtn.Position = UDim2.new(0, 5, 0, 110)
+CloseBtn.Text = "❌ Скрыть"
+local hidden = false
+CloseBtn.MouseButton1Click:Connect(function()
+    hidden = not hidden
+    MainFrame.Visible = not hidden
 end)
 
--- Функция создания ракеты
-local function spawnRocket()
+-- Радар
+local Radar = Instance.new("Frame", ScreenGui)
+Radar.Size = UDim2.new(0, 200, 0, 200)
+Radar.Position = UDim2.new(0.8, 0, 0.05, 0)
+Radar.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Radar.Active = true
+Radar.Draggable = true
+
+local RadarLabel = Instance.new("TextLabel", Radar)
+RadarLabel.Size = UDim2.new(1, 0, 0, 20)
+RadarLabel.Text = "📡 Радар"
+RadarLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+RadarLabel.TextColor3 = Color3.fromRGB(255,255,255)
+
+-- Функция ракеты
+local function createRocket(target)
     local rocket = Instance.new("Part", workspace)
-    rocket.Size = Vector3.new(2,2,6)
-    rocket.BrickColor = BrickColor.new("Bright red")
-    rocket.Position = player.Character.Head.Position + Vector3.new(0,5,0)
+    rocket.Shape = Enum.PartType.Cylinder
+    rocket.Size = Vector3.new(1,1,4)
+    rocket.CFrame = LocalPlayer.Character.Head.CFrame
+    rocket.BrickColor = BrickColor.new("Really red")
     rocket.Anchored = false
-    rocket.CanCollide = true
+    rocket.CanCollide = false
 
-    local bodyVelocity = Instance.new("BodyVelocity", rocket)
-    bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bodyVelocity.Velocity = Vector3.new(0,0,0)
+    local bv = Instance.new("BodyVelocity", rocket)
+    bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+    bv.Velocity = Vector3.new(0,0,0)
 
-    local function findTarget()
-        local nearest
-        local minDist = math.huge
-        for _, p in pairs(Players:GetPlayers()) do
-            if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                local dist = (rocket.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                if dist < minDist then
-                    nearest = p.Character.HumanoidRootPart
-                    minDist = dist
-                end
-            end
+    -- Наводка
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if target and target.Parent and target:FindFirstChild("HumanoidRootPart") then
+            local dir = (target.HumanoidRootPart.Position - rocket.Position).unit * 100
+            bv.Velocity = dir
+        else
+            conn:Disconnect()
         end
-        return nearest
-    end
+    end)
 
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        local target = findTarget()
-        if target then
-            local dir = (target.Position - rocket.Position).Unit
-            bodyVelocity.Velocity = dir * 100 -- скорость ракеты
+    -- Урон при касании
+    rocket.Touched:Connect(function(hit)
+        local hum = hit.Parent:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:TakeDamage(100)
         end
-
-        -- Взрыв при столкновении с землей или объектом
-        local ray = Ray.new(rocket.Position, Vector3.new(0,-1,0)*1)
-        local hit = workspace:FindPartOnRay(ray, rocket)
-        if hit then
-            local explosion = Instance.new("Explosion", workspace)
-            explosion.Position = rocket.Position
-            explosion.BlastRadius = 10
-            explosion.BlastPressure = 50000
-            Debris:AddItem(rocket,0)
-            connection:Disconnect()
-        end
+        local explosion = Instance.new("Explosion", workspace)
+        explosion.Position = rocket.Position
+        explosion.BlastRadius = 5
+        explosion.BlastPressure = 5000
+        rocket:Destroy()
     end)
 end
 
-rocketButton.MouseButton1Click:Connect(spawnRocket)
+-- Кнопки запуска
+BtnPlayers.MouseButton1Click:Connect(function()
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            createRocket(plr.Character)
+        end
+    end
+end)
+
+BtnNPC.MouseButton1Click:Connect(function()
+    for _,npc in pairs(workspace:GetDescendants()) do
+        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and not Players:GetPlayerFromCharacter(npc) then
+            createRocket(npc)
+        end
+    end
+end)
+
+-- Обновление радара
+RunService.Heartbeat:Connect(function()
+    for _,c in pairs(Radar:GetChildren()) do
+        if c:IsA("Frame") and c.Name == "Dot" then
+            c:Destroy()
+        end
+    end
+
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+            local dot = Instance.new("Frame", Radar)
+            dot.Size = UDim2.new(0,5,0,5)
+            dot.Name = "Dot"
+            dot.BackgroundColor3 = (plr == LocalPlayer) and Color3.new(0,1,0) or Color3.new(1,0,0)
+            dot.Position = UDim2.new(math.random(),0,math.random(),0)
+        end
+    end
+end)
