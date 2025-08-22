@@ -1,61 +1,62 @@
 local Players = game:GetService("Players")
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local mouse = player:GetMouse()
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
 
--- Создаём оружие
-local tool = Instance.new("Tool")
-tool.Name = "M41C"
-tool.RequiresHandle = true
-tool.Parent = player.Backpack
+-- Прицел
+local crosshair = Instance.new("ImageLabel", gui)
+crosshair.Size = UDim2.new(0,50,0,50)
+crosshair.Position = UDim2.new(0.5,-25,0.5,-25)
+crosshair.BackgroundTransparency = 1
+crosshair.Image = "http://www.roblox.com/asset/?id=6031077289" -- пример прицела
 
--- Создаём ручку оружия (handle)
-local handle = Instance.new("Part")
-handle.Name = "Handle"
-handle.Size = Vector3.new(1,1,3)
-handle.Color = Color3.fromRGB(30,30,30)
-handle.Parent = tool
-tool.Handle = handle
-
--- Создаём GUI для выстрела
-local screenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-local fireButton = Instance.new("TextButton", screenGui)
-fireButton.Size = UDim2.new(0,100,0,50)
-fireButton.Position = UDim2.new(0.9, -50, 0.9, -25)
+-- Кнопка выстрела
+local fireButton = Instance.new("TextButton", gui)
+fireButton.Size = UDim2.new(0,100,0,100)
+fireButton.Position = UDim2.new(0.85,0,0.75,0)
 fireButton.Text = "FIRE"
+fireButton.TextScaled = true
 
-local fireRate = 0.05 -- очень быстрый выстрел
+-- Закрываемый GUI
+local closeButton = Instance.new("TextButton", gui)
+closeButton.Size = UDim2.new(0,50,0,50)
+closeButton.Position = UDim2.new(0.95, -50, 0, 0)
+closeButton.Text = "X"
+closeButton.TextScaled = true
+closeButton.MouseButton1Click:Connect(function()
+    gui:Destroy()
+end)
+
+-- Настройки стрельбы
+local fireRate = 0.1
+local damage = 50
 local canFire = true
 
 local function shoot()
     if not canFire then return end
     canFire = false
-    local bullet = Instance.new("Part")
+
+    local bullet = Instance.new("Part", workspace)
     bullet.Size = Vector3.new(0.3,0.3,1)
-    bullet.BrickColor = BrickColor.new("Bright red")
-    bullet.Position = handle.Position + (handle.CFrame.lookVector * 2)
+    bullet.CFrame = player.Character.Head.CFrame
     bullet.Anchored = false
     bullet.CanCollide = false
-    bullet.Parent = workspace
+    bullet.BrickColor = BrickColor.new("Bright blue")
 
-    local bv = Instance.new("BodyVelocity")
-    bv.Velocity = handle.CFrame.lookVector * 500 -- скорость пули
+    local bv = Instance.new("BodyVelocity", bullet)
+    bv.Velocity = player.Character.Head.CFrame.LookVector * 300
     bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-    bv.Parent = bullet
 
     bullet.Touched:Connect(function(hit)
-        local h = hit.Parent:FindFirstChild("Humanoid")
-        if h and hit.Parent ~= character then
-            h:TakeDamage(50)
+        local humanoid = hit.Parent:FindFirstChild("Humanoid")
+        if humanoid and hit.Parent ~= player.Character then
+            humanoid:TakeDamage(damage)
             bullet:Destroy()
         end
     end)
 
     game:GetService("Debris"):AddItem(bullet, 3)
-    
     wait(fireRate)
     canFire = true
 end
 
 fireButton.MouseButton1Click:Connect(shoot)
-tool.Activated:Connect(shoot) -- также можно стрелять через Tool
