@@ -1,83 +1,84 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/KukaPuka-chu/ban_unban.lua/refs/heads/main/ban_unban.lua"))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
 
--- Пример добавления Гастер-бластера с текстурой и уроном
-local function spawnBlaster(position, color, damage)
-    local blaster = Instance.new("Part")
-    blaster.Size = Vector3.new(3,3,3)
-    blaster.Position = position
-    blaster.Anchored = true
-    blaster.CanCollide = false
-    blaster.Parent = workspace
+local player = Players.LocalPlayer
+local mouse = player:GetMouse()
+local gui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
+gui.Name = "RocketGUI"
 
-    local decal = Instance.new("Decal", blaster)
-    decal.Texture = "https://i.supaimg.com/43eab1e1-08f6-4a79-acf9-5b458354040a.png"
+-- Таблица GUI
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0,200,0,100)
+frame.Position = UDim2.new(0.5,-100,0.8,0)
+frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Active = true
+frame.Draggable = true
 
-    -- Самонаведение
-    game:GetService("RunService").RenderStepped:Connect(function()
-        if blaster.Parent then
-            local player = game.Players.LocalPlayer
-            blaster.CFrame = CFrame.new(blaster.Position, player.Character.Head.Position)
-            -- Нанесение урона при контакте
-            for _, target in pairs(workspace:GetChildren()) do
-                if target:FindFirstChild("Humanoid") and target ~= player.Character then
-                    if (target.HumanoidRootPart.Position - blaster.Position).Magnitude < 3 then
-                        target.Humanoid:TakeDamage(damage * (1/60)) -- урон 30 ед/сек
-                    end
+-- Кнопка Ракета
+local rocketButton = Instance.new("TextButton", frame)
+rocketButton.Size = UDim2.new(0,180,0,40)
+rocketButton.Position = UDim2.new(0,10,0,10)
+rocketButton.Text = "Ракета"
+
+-- Кнопка закрытия
+local closeButton = Instance.new("TextButton", frame)
+closeButton.Size = UDim2.new(0,40,0,40)
+closeButton.Position = UDim2.new(0.75,0,0,10)
+closeButton.Text = "X"
+
+closeButton.MouseButton1Click:Connect(function()
+    frame.Visible = false
+end)
+
+-- Функция создания ракеты
+local function spawnRocket()
+    local rocket = Instance.new("Part", workspace)
+    rocket.Size = Vector3.new(2,2,6)
+    rocket.BrickColor = BrickColor.new("Bright red")
+    rocket.Position = player.Character.Head.Position + Vector3.new(0,5,0)
+    rocket.Anchored = false
+    rocket.CanCollide = true
+
+    local bodyVelocity = Instance.new("BodyVelocity", rocket)
+    bodyVelocity.MaxForce = Vector3.new(1e5,1e5,1e5)
+    bodyVelocity.Velocity = Vector3.new(0,0,0)
+
+    local function findTarget()
+        local nearest
+        local minDist = math.huge
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                local dist = (rocket.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if dist < minDist then
+                    nearest = p.Character.HumanoidRootPart
+                    minDist = dist
                 end
             end
         end
-    end)
-end
-
--- Пример стены из костей
-local function spawnBoneWall(position, lookVector, damage)
-    for i = 0, 5 do
-        local bone = Instance.new("Part")
-        bone.Size = Vector3.new(1,5,1)
-        bone.Position = position + lookVector * (i * 5)
-        bone.Anchored = true
-        bone.CanCollide = false
-        bone.Parent = workspace
-
-        -- Урон при касании
-        bone.Touched:Connect(function(hit)
-            local humanoid = hit.Parent:FindFirstChild("Humanoid")
-            if humanoid and hit.Parent ~= game.Players.LocalPlayer.Character then
-                humanoid:TakeDamage(damage)
-            end
-        end)
+        return nearest
     end
-end
 
--- Меч
-local function giveSword()
-    local sword = Instance.new("Tool")
-    sword.Name = "Classic Sword"
-    sword.Parent = game.Players.LocalPlayer.Backpack
-    sword.Grip = CFrame.new()
-    local handle = Instance.new("Part")
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(1,4,1)
-    handle.Parent = sword
-    sword.Activated:Connect(function()
-        for _, target in pairs(workspace:GetChildren()) do
-            if target:FindFirstChild("Humanoid") and target ~= game.Players.LocalPlayer.Character then
-                if (target.HumanoidRootPart.Position - sword.Handle.Position).Magnitude < 5 then
-                    target.Humanoid:TakeDamage(50)
-                end
-            end
+    local connection
+    connection = RunService.Heartbeat:Connect(function()
+        local target = findTarget()
+        if target then
+            local dir = (target.Position - rocket.Position).Unit
+            bodyVelocity.Velocity = dir * 100 -- скорость ракеты
+        end
+
+        -- Взрыв при столкновении с землей или объектом
+        local ray = Ray.new(rocket.Position, Vector3.new(0,-1,0)*1)
+        local hit = workspace:FindPartOnRay(ray, rocket)
+        if hit then
+            local explosion = Instance.new("Explosion", workspace)
+            explosion.Position = rocket.Position
+            explosion.BlastRadius = 10
+            explosion.BlastPressure = 50000
+            Debris:AddItem(rocket,0)
+            connection:Disconnect()
         end
     end)
 end
 
--- Музыка Last Breath Phase 2
-local music = Instance.new("Sound", workspace)
-music.SoundId = "rbxassetid://13080517063" -- Айди музыки
-music.Looped = true
-music:Play()
-
--- Примеры спавна
-local player = game.Players.LocalPlayer
-spawnBlaster(player.Character.Head.Position + Vector3.new(0,5,0), Color3.new(1,0,0), 30)
-spawnBoneWall(player.Character.Head.Position + Vector3.new(0,0,5), player.Character.Head.CFrame.LookVector, 25)
-giveSword
+rocketButton.MouseButton1Click:Connect(spawnRocket)
