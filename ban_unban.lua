@@ -1,109 +1,101 @@
--- Last Breath Sans Phase 2 GUI Script
--- by ChatGPT & user
+--// Fling GUI Script
+-- вставь в LocalScript в StarterPlayerScripts
 
--- === НАСТРОЙКИ ===
-local BoneTexture = "https://i.supaimg.com/43eab1e1-08f6-4a79-acf9-5b458354040a.png"
-local MusicId = "rbxassetid://345052019" -- Last Breath Phase 2
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- === GUI ===
-local player = game.Players.LocalPlayer
-local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SansPhase2"
+-- GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "FlingGui"
 
-local function makeButton(name, pos, text)
-    local b = Instance.new("TextButton", gui)
-    b.Name = name
-    b.Text = text
-    b.Size = UDim2.new(0, 150, 0, 40)
-    b.Position = pos
-    b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.BorderSizePixel = 2
-    return b
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 200, 0, 300)
+Frame.Position = UDim2.new(0, 50, 0, 50)
+Frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.Text = "Fling Players"
+Title.BackgroundColor3 = Color3.fromRGB(50,50,50)
+Title.TextColor3 = Color3.new(1,1,1)
+
+-- Кнопка свернуть
+local MinBtn = Instance.new("TextButton", Frame)
+MinBtn.Size = UDim2.new(0,30,0,30)
+MinBtn.Position = UDim2.new(1,-35,0,0)
+MinBtn.Text = "-"
+MinBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+
+-- Кнопка для открытия после сворачивания
+local OpenBtn = Instance.new("TextButton", ScreenGui)
+OpenBtn.Size = UDim2.new(0,50,0,30)
+OpenBtn.Position = UDim2.new(0,50,0,50)
+OpenBtn.Text = "Open"
+OpenBtn.Visible = false
+OpenBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
+
+MinBtn.MouseButton1Click:Connect(function()
+	Frame.Visible = false
+	OpenBtn.Visible = true
+end)
+
+OpenBtn.MouseButton1Click:Connect(function()
+	Frame.Visible = true
+	OpenBtn.Visible = false
+end)
+
+-- Список игроков
+local PlayerList = Instance.new("ScrollingFrame", Frame)
+PlayerList.Size = UDim2.new(1,0,1,-30)
+PlayerList.Position = UDim2.new(0,0,0,30)
+PlayerList.CanvasSize = UDim2.new(0,0,0,0)
+
+local UIList = Instance.new("UIListLayout", PlayerList)
+
+-- Функция обновления списка
+local function RefreshList()
+	for _,v in pairs(PlayerList:GetChildren()) do
+		if v:IsA("TextButton") then v:Destroy() end
+	end
+
+	for _,plr in pairs(Players:GetPlayers()) do
+		if plr ~= LocalPlayer then
+			local Btn = Instance.new("TextButton", PlayerList)
+			Btn.Size = UDim2.new(1,-5,0,30)
+			Btn.Text = plr.Name
+			Btn.BackgroundColor3 = Color3.fromRGB(100,100,100)
+			Btn.TextColor3 = Color3.new(1,1,1)
+
+			Btn.MouseButton1Click:Connect(function()
+				-- Fling
+				local char = LocalPlayer.Character
+				local targetChar = plr.Character
+				if char and targetChar and char:FindFirstChild("HumanoidRootPart") and targetChar:FindFirstChild("HumanoidRootPart") then
+					local root = char.HumanoidRootPart
+					local targetRoot = targetChar.HumanoidRootPart
+
+					-- сохраняем позицию
+					local oldCFrame = root.CFrame
+
+					-- телепорт к цели
+					root.CFrame = targetRoot.CFrame + Vector3.new(0,2,0)
+
+					-- толчок
+					local bv = Instance.new("BodyVelocity", root)
+					bv.Velocity = Vector3.new(9999,9999,9999)
+					bv.MaxForce = Vector3.new(1e9,1e9,1e9)
+					game:GetService("Debris"):AddItem(bv, 0.2)
+
+					wait(0.2)
+
+					-- возврат на место
+					root.CFrame = oldCFrame
+				end
+			end)
+		end
+	end
 end
 
-local wallBtn = makeButton("BoneWall", UDim2.new(0, 50, 0, 100), "🦴 Костяная стена")
-local swordBtn = makeButton("BoneSword", UDim2.new(0, 50, 0, 150), "⚔️ Меч-кость")
-local blasterBtn = makeButton("Blaster", UDim2.new(0, 50, 0, 200), "🔫 Гастер-бластер")
-local shieldBtn = makeButton("Shield", UDim2.new(0, 50, 0, 250), "🛡️ Щит")
-local musicBtn = makeButton("Music", UDim2.new(0, 50, 0, 300), "🎵 Включить фазу 2")
-
--- === ФУНКЦИИ ===
-
--- Костяная стена
-wallBtn.MouseButton1Click:Connect(function()
-    local wall = Instance.new("Part", workspace)
-    wall.Anchored = true
-    wall.Size = Vector3.new(20, 15, 1)
-    wall.Position = player.Character.Head.Position + Vector3.new(0, 0, -10)
-    local tex = Instance.new("Decal", wall)
-    tex.Texture = BoneTexture
-end)
-
--- Меч-кость
-swordBtn.MouseButton1Click:Connect(function()
-    local sword = Instance.new("Tool", player.Backpack)
-    sword.Name = "Bone Sword"
-    local handle = Instance.new("Part", sword)
-    handle.Name = "Handle"
-    handle.Size = Vector3.new(1, 4, 1)
-    local tex = Instance.new("Decal", handle)
-    tex.Texture = BoneTexture
-    sword.RequiresHandle = true
-
-    local dmg = 30
-    sword.Activated:Connect(function()
-        local hum = player.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            hum:TakeDamage(dmg) -- наносит урон
-        end
-    end)
-end)
-
--- Самонаводящийся бластер
-blasterBtn.MouseButton1Click:Connect(function()
-    local target = nil
-    for _,plr in pairs(game.Players:GetPlayers()) do
-        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-            target = plr.Character
-            break
-        end
-    end
-    if target then
-        local blaster = Instance.new("Part", workspace)
-        blaster.Size = Vector3.new(3, 3, 8)
-        blaster.Anchored = true
-        blaster.CFrame = player.Character.Head.CFrame * CFrame.new(0, 5, -10)
-        local tex = Instance.new("Decal", blaster)
-        tex.Texture = BoneTexture
-
-        task.wait(1)
-        local beam = Instance.new("Part", workspace)
-        beam.Anchored = true
-        beam.Size = Vector3.new(1,1, (player:DistanceFromCharacter(target.HumanoidRootPart.Position)))
-        beam.CFrame = CFrame.new(blaster.Position, target.HumanoidRootPart.Position)
-        beam.Color = Color3.fromRGB(255,255,255)
-        game:GetService("Debris"):AddItem(beam, 0.5)
-
-        target.Humanoid:TakeDamage(40)
-    end
-end)
-
--- Щит
-shieldBtn.MouseButton1Click:Connect(function()
-    local shield = Instance.new("Part", workspace)
-    shield.Anchored = true
-    shield.Size = Vector3.new(10,10,1)
-    shield.Position = player.Character.Head.Position + Vector3.new(0,0,5)
-    local tex = Instance.new("Decal", shield)
-    tex.Texture = BoneTexture
-    game:GetService("Debris"):AddItem(shield, 5)
-end)
-
--- Музыка
-musicBtn.MouseButton1Click:Connect(function()
-    local sound = Instance.new("Sound", workspace)
-    sound.SoundId = MusicId
-    sound.Looped = true
-    sound:Play()
-end)
+RefreshList()
+Players.PlayerAdded:Connect(RefreshList)
+Players.PlayerRemoving:Connect(RefreshList)
