@@ -1,124 +1,109 @@
--- 🚀 Самонаводящаяся ракета (одна на выстрел)
--- Работает в LocalScript (StarterPlayerScripts или через loadstring)
+-- Last Breath Sans Phase 2 GUI Script
+-- by ChatGPT & user
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
+-- === НАСТРОЙКИ ===
+local BoneTexture = "https://i.supaimg.com/43eab1e1-08f6-4a79-acf9-5b458354040a.png"
+local MusicId = "rbxassetid://345052019" -- Last Breath Phase 2
 
--- ===== ФУНКЦИЯ СОЗДАНИЯ РАКЕТЫ =====
-local function spawnMissile(target)
-    if not LocalPlayer.Character or not LocalPlayer.Character.PrimaryPart then return end
-    if not target or not target:FindFirstChild("HumanoidRootPart") then return end
+-- === GUI ===
+local player = game.Players.LocalPlayer
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "SansPhase2"
 
-    local missile = Instance.new("Part")
-    missile.Size = Vector3.new(1,1,3)
-    missile.BrickColor = BrickColor.new("Really red")
-    missile.Material = Enum.Material.Neon
-    missile.Anchored = false
-    missile.CanCollide = false
-    missile.CFrame = LocalPlayer.Character.PrimaryPart.CFrame
-        + (LocalPlayer.Character.PrimaryPart.CFrame.LookVector * 5)
-        + Vector3.new(0,3,0)
-    missile.Parent = workspace
-
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
-    bv.Velocity = Vector3.new(0,0,0)
-    bv.Parent = missile
-
-    -- Наведение
-    local connection
-    connection = RunService.Heartbeat:Connect(function()
-        if target and target:FindFirstChild("HumanoidRootPart") and target:FindFirstChild("Humanoid") then
-            local dir = (target.HumanoidRootPart.Position - missile.Position).Unit
-            bv.Velocity = dir * 120
-
-            if (missile.Position - target.HumanoidRootPart.Position).Magnitude < 5 then
-                -- ВЗРЫВ
-                local explosion = Instance.new("Explosion")
-                explosion.Position = missile.Position
-                explosion.BlastRadius = 6
-                explosion.BlastPressure = 0
-                explosion.Parent = workspace
-
-                -- Уничтожение цели
-                if target ~= LocalPlayer.Character then
-                    target.Humanoid.Health = 0
-                end
-
-                missile:Destroy()
-                connection:Disconnect()
-            end
-        else
-            missile:Destroy()
-            connection:Disconnect()
-        end
-    end)
+local function makeButton(name, pos, text)
+    local b = Instance.new("TextButton", gui)
+    b.Name = name
+    b.Text = text
+    b.Size = UDim2.new(0, 150, 0, 40)
+    b.Position = pos
+    b.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    b.TextColor3 = Color3.fromRGB(255, 255, 255)
+    b.BorderSizePixel = 2
+    return b
 end
 
--- ===== GUI =====
-local ScreenGui = Instance.new("ScreenGui", LocalPlayer:WaitForChild("PlayerGui"))
+local wallBtn = makeButton("BoneWall", UDim2.new(0, 50, 0, 100), "🦴 Костяная стена")
+local swordBtn = makeButton("BoneSword", UDim2.new(0, 50, 0, 150), "⚔️ Меч-кость")
+local blasterBtn = makeButton("Blaster", UDim2.new(0, 50, 0, 200), "🔫 Гастер-бластер")
+local shieldBtn = makeButton("Shield", UDim2.new(0, 50, 0, 250), "🛡️ Щит")
+local musicBtn = makeButton("Music", UDim2.new(0, 50, 0, 300), "🎵 Включить фазу 2")
 
-local frame = Instance.new("Frame", ScreenGui)
-frame.Size = UDim2.new(0,200,0,120)
-frame.Position = UDim2.new(0,20,0,200)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-frame.Active = true
-frame.Draggable = true
+-- === ФУНКЦИИ ===
 
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
-title.Text = "🚀 Панель Ракет"
-title.BackgroundColor3 = Color3.fromRGB(50,50,50)
-title.TextColor3 = Color3.fromRGB(255,255,255)
+-- Костяная стена
+wallBtn.MouseButton1Click:Connect(function()
+    local wall = Instance.new("Part", workspace)
+    wall.Anchored = true
+    wall.Size = Vector3.new(20, 15, 1)
+    wall.Position = player.Character.Head.Position + Vector3.new(0, 0, -10)
+    local tex = Instance.new("Decal", wall)
+    tex.Texture = BoneTexture
+end)
 
-local btnPlayer = Instance.new("TextButton", frame)
-btnPlayer.Size = UDim2.new(1,-20,0,40)
-btnPlayer.Position = UDim2.new(0,10,0,40)
-btnPlayer.Text = "Выстрелить по игроку"
-btnPlayer.BackgroundColor3 = Color3.fromRGB(200,50,50)
-btnPlayer.TextColor3 = Color3.new(1,1,1)
+-- Меч-кость
+swordBtn.MouseButton1Click:Connect(function()
+    local sword = Instance.new("Tool", player.Backpack)
+    sword.Name = "Bone Sword"
+    local handle = Instance.new("Part", sword)
+    handle.Name = "Handle"
+    handle.Size = Vector3.new(1, 4, 1)
+    local tex = Instance.new("Decal", handle)
+    tex.Texture = BoneTexture
+    sword.RequiresHandle = true
 
-local btnNPC = Instance.new("TextButton", frame)
-btnNPC.Size = UDim2.new(1,-20,0,40)
-btnNPC.Position = UDim2.new(0,10,0,85)
-btnNPC.Text = "Выстрелить по NPC"
-btnNPC.BackgroundColor3 = Color3.fromRGB(50,50,200)
-btnNPC.TextColor3 = Color3.new(1,1,1)
+    local dmg = 30
+    sword.Activated:Connect(function()
+        local hum = player.Character:FindFirstChildOfClass("Humanoid")
+        if hum then
+            hum:TakeDamage(dmg) -- наносит урон
+        end
+    end)
+end)
 
--- ===== ЛОГИКА =====
-btnPlayer.MouseButton1Click:Connect(function()
-    -- Найти ближайшего игрока
-    local closest, dist = nil, math.huge
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
-            local d = (plr.Character.HumanoidRootPart.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
-            if d < dist then
-                dist = d
-                closest = plr.Character
-            end
+-- Самонаводящийся бластер
+blasterBtn.MouseButton1Click:Connect(function()
+    local target = nil
+    for _,plr in pairs(game.Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("Humanoid") then
+            target = plr.Character
+            break
         end
     end
-    if closest then
-        spawnMissile(closest)
+    if target then
+        local blaster = Instance.new("Part", workspace)
+        blaster.Size = Vector3.new(3, 3, 8)
+        blaster.Anchored = true
+        blaster.CFrame = player.Character.Head.CFrame * CFrame.new(0, 5, -10)
+        local tex = Instance.new("Decal", blaster)
+        tex.Texture = BoneTexture
+
+        task.wait(1)
+        local beam = Instance.new("Part", workspace)
+        beam.Anchored = true
+        beam.Size = Vector3.new(1,1, (player:DistanceFromCharacter(target.HumanoidRootPart.Position)))
+        beam.CFrame = CFrame.new(blaster.Position, target.HumanoidRootPart.Position)
+        beam.Color = Color3.fromRGB(255,255,255)
+        game:GetService("Debris"):AddItem(beam, 0.5)
+
+        target.Humanoid:TakeDamage(40)
     end
 end)
 
-btnNPC.MouseButton1Click:Connect(function()
-    -- Найти ближайшего NPC (Model с Humanoid без игрока)
-    local closest, dist = nil, math.huge
-    for _,npc in ipairs(workspace:GetDescendants()) do
-        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and npc:FindFirstChild("HumanoidRootPart") then
-            if not Players:GetPlayerFromCharacter(npc) then
-                local d = (npc.HumanoidRootPart.Position - LocalPlayer.Character.PrimaryPart.Position).Magnitude
-                if d < dist then
-                    dist = d
-                    closest = npc
-                end
-            end
-        end
-    end
-    if closest then
-        spawnMissile(closest)
-    end
+-- Щит
+shieldBtn.MouseButton1Click:Connect(function()
+    local shield = Instance.new("Part", workspace)
+    shield.Anchored = true
+    shield.Size = Vector3.new(10,10,1)
+    shield.Position = player.Character.Head.Position + Vector3.new(0,0,5)
+    local tex = Instance.new("Decal", shield)
+    tex.Texture = BoneTexture
+    game:GetService("Debris"):AddItem(shield, 5)
+end)
+
+-- Музыка
+musicBtn.MouseButton1Click:Connect(function()
+    local sound = Instance.new("Sound", workspace)
+    sound.SoundId = MusicId
+    sound.Looped = true
+    sound:Play()
 end)
